@@ -1,118 +1,47 @@
-# Task Queue System
+# 🚀 Task Queue System
 
-Distributed background job processor — like Celery but in Java/Spring Boot.
-
----
-
-## Prerequisites
-
-Install these before anything else:
-
-| Tool | Version | Download |
-|------|---------|----------|
-| Java JDK | 17+ | https://adoptium.net |
-| Maven | 3.9+ | https://maven.apache.org |
-| Docker Desktop | Latest | https://www.docker.com/products/docker-desktop |
-| Node.js | 18+ | https://nodejs.org |
-| IntelliJ IDEA | Any | https://www.jetbrains.com/idea |
+> A high-performance, distributed background job processing system built with Spring Boot, Kafka, and PostgreSQL, featuring a sleek React + Vite administrative dashboard.
 
 ---
 
-## First-time setup
+## 📖 Overview
 
-### Step 1 — Start infrastructure
-```bash
-# From project root
-docker-compose up -d mysql redis zookeeper kafka kafka-ui redis-commander
+The Task Queue System allows applications to reliably trigger background tasks (like sending emails, generating PDFs, generic webhooks, etc.) asynchronously using a robust Kafka message broker architecture, backed by PostgreSQL for state persistence and Redis for extreme-scale caching and API Rate Limiting.
 
-# Wait ~20 seconds for everything to start, then verify:
-docker-compose ps
-# All services should show "Up"
-```
-
-### Step 2 — Verify services are running
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| Kafka UI | http://localhost:8090 | none |
-| Redis UI | http://localhost:8091 | none |
-| MySQL | localhost:3306 | tquser / tqpass123 |
-
-### Step 3 — Configure application.yml
-Open `backend/src/main/resources/application.yml` and update:
-- `app.encryption.key` → change to any 32-character string
-- `spring.mail.*` → your Gmail + app password (for system emails)
-
-### Step 4 — Run Spring Boot
-```bash
-cd backend
-mvn spring-boot:run
-```
-
-Flyway runs automatically on startup — creates all tables from `db/migration/`.
-
-### Step 5 — Verify backend
-- Swagger UI: http://localhost:8080/api/v1/swagger-ui/index.html
-- Health check: http://localhost:8080/api/v1/actuator/health
-
-### Step 6 — Start admin panel
-```bash
-cd admin-panel
-npm install
-npm start
-# Opens at http://localhost:3000
-```
+**Main Features:**
+- **Admin Dashboard:** A beautiful React 18 frontend to manage projects, companies, API keys, and track DLQ (Dead Letter Queue) metrics.
+- **Multi-Tenant:** Safely partition projects and keys across multiple distinct companies.
+- **JWT-Secured Admin:** Secure the admin APIs with stateless JWT Authentication.
+- **Client API Security:** Project-specific `X-API-Key` ingress filtering cached in Redis.
+- **Resilient Retry Mechanics:** Exponential backoff for failed jobs, graduating to a proper DLQ mechanism.
 
 ---
 
-## Project structure
+## 🛠️ Developer Setup & Cloning
 
-```
-task-queue-system/
-├── backend/                          Spring Boot app
-│   ├── src/main/java/com/taskqueue/
-│   │   ├── config/                   Kafka, Redis, Security, AppProperties
-│   │   ├── filter/                   ApiKeyFilter, RateLimitFilter, AdminBypass
-│   │   ├── controller/               JobController, AdminController, MetricsController
-│   │   ├── service/                  JobService, ApiKeyService, RetryService, WebhookService
-│   │   ├── worker/                   BaseWorker, EmailWorker, GenericWorker, Dispatcher
-│   │   ├── model/                    Job, ApiKey, Company, Project, SmtpConfig (JPA entities)
-│   │   ├── repository/               JPA repositories
-│   │   ├── dto/                      Request/Response DTOs
-│   │   └── exception/                GlobalExceptionHandler
-│   ├── src/main/resources/
-│   │   ├── application.yml           All config
-│   │   └── db/migration/             Flyway SQL files (V1, V2, V3, V4...)
-│   ├── Dockerfile
-│   └── pom.xml
-├── admin-panel/                      React admin UI (localhost only)
-│   └── src/pages/                    Dashboard, ApiKeys, Jobs, DLQ, Clients
-├── docker-compose.yml                MySQL + Redis + Kafka + UI tools
-├── Makefile                          Dev shortcuts
-└── README.md
-```
+If you have just cloned this repository, please immediately consult the [**Quickstart Clone Guide**](QUICKSTART_CLONE.md).
+
+The Quickstart will walk you step-by-step through:
+1. Bootstrapping PostgreSQL, Redis, Kafka, and Zookeeper via Docker.
+2. Spinning up the Spring Boot engine.
+3. Spinning up the Vite React dashboard.
+4. Logging in as the System Admin.
 
 ---
 
-## Quick commands
+## 📂 Documentation Stack
 
-```bash
-make dev            # start all docker services + show URLs
-make run            # run Spring Boot
-make admin          # run React admin panel
-make infra-down     # stop docker services
-make logs s=kafka   # tail kafka logs
-make test           # run tests
-```
+To understand the deeper architecture, consult the following markdown manuals included in the repository:
+
+- 🏗️ **`FILE_STRUCTURE.md`**: Explains every folder, class, and architectural decision.
+- 🧪 **`testingGuide.md`**: The exhaustive sequence of how to manually test the APIs directly using Postman.
+- 🔌 **`ENDPOINT.md`**: The REST API surface definitions.
+- 🐳 **`docker-compose.yml`**: The centralized infrastructure definition list.
 
 ---
 
-## URLs when everything is running
+## 💡 Tech Stack
 
-| Service | URL |
-|---------|-----|
-| Spring Boot API | http://localhost:8080/api/v1 |
-| Swagger UI | http://localhost:8080/api/v1/swagger-ui/index.html |
-| Admin Panel | http://localhost:3000 |
-| Kafka UI | http://localhost:8090 |
-| Redis UI | http://localhost:8091 |
-| Actuator health | http://localhost:8080/api/v1/actuator/health |
+**Backend:** Java 17, Spring Boot 3, Spring Data JPA, Spring Kafka, Spring Data Redis, Flyway, PostgreSQL, jjwt.
+**Frontend:** React 18, Vite, Tailwind CSS, React Router DOM, Axios, Recharts.
+**Infrastructure:** Docker, Docker Compose, Confluent Kafka, PostgreSQL, Redis.

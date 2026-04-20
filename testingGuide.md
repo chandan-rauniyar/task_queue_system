@@ -3,7 +3,8 @@
 > Follow this file top to bottom in Postman.
 > Every test depends on the previous one — do NOT skip steps.
 > Base URL: http://localhost:8080/api/v1
-> Admin endpoints need NO header. Job endpoints need X-API-Key header.
+> Admin endpoints need `Authorization: Bearer <token>` header.
+> Job endpoints need `X-API-Key` header.
 
 ---
 
@@ -19,13 +20,14 @@ Health check        → http://localhost:8080/api/v1/actuator/health shows "UP"
 
 Save these values as you go — you need them for later tests:
 ```
+ADMIN_TOKEN  = (copy from Test 1b response)
 COMPANY_ID   = (copy from Test 2 response)
 PROJECT_ID   = (copy from Test 3 response)
-RAW_API_KEY  = (copy from Test 4 response — shown ONCE only)
-JOB_ID       = (copy from Test 5 response)
-DLQ_ID       = (copy from Test 14 response)
-SMTP_ID      = (copy from Test 10 response)
-KEY_ID       = (copy from Test 4 response)
+RAW_API_KEY  = (copy from Test 9 response — shown ONCE only)
+JOB_ID       = (copy from Test 16 response)
+DLQ_ID       = (copy from Test response)
+SMTP_ID      = (copy from Test 12 response)
+KEY_ID       = (copy from Test 9 response)
 ```
 
 ---
@@ -59,6 +61,37 @@ Expected response `200 OK`:
 If status is DOWN for db → PostgreSQL not running, run: `docker-compose up -d postgres`
 If status is DOWN for redis → Redis not running, run: `docker-compose up -d redis`
 If status is DOWN for mail → Check Mailtrap credentials in application.yml
+
+---
+
+### Test 1b — Login as Admin
+```
+METHOD:  POST
+URL:     http://localhost:8080/api/v1/auth/login
+HEADERS: Content-Type: application/json
+BODY:
+```
+```json
+{
+  "email": "admin@taskqueue.local",
+  "password": "admin123"
+}
+```
+
+Expected response `200 OK`:
+```json
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiJ9...",
+    "email": "admin@taskqueue.local",
+    "role": "ADMIN"
+  }
+}
+```
+
+Action: **Copy the `token` value → save as ADMIN_TOKEN**
+> From now on, attach `Authorization: Bearer ADMIN_TOKEN` to all `/admin/` requests!
 
 ---
 

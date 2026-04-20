@@ -29,7 +29,7 @@ task-queue-system/
 ├── FILE_STRUCTURE.md       ✅  This file — full file map + what to do
 ├── ENDPOINTS.md            ✅  All 22 REST endpoints with request/response examples
 ├── backend/                ✅  Spring Boot application — COMPLETE
-└── admin-panel/            🔜  React admin panel — next phase
+└── FRONTENDUI/             ✅  React admin panel — COMPLETE (Vite + Tailwind)
 ```
 
 ---
@@ -208,33 +208,31 @@ backend/
 
 ---
 
-## admin-panel/ (next phase)
+## FRONTENDUI/ (React Dashbaord - COMPLETE)
 
 ```
-admin-panel/
+FRONTENDUI/
 ├── package.json            ✅  React 18, react-router-dom, axios, recharts, react-query
+├── vite.config.js          ✅  Vite bundler config + local API proxy wrapper
+├── tailwind.config.js      ✅  Modern UI styling toolkit
 │
 └── src/
-    ├── index.js            🔜  React root
-    ├── App.jsx             🔜  Router — all page routes
-    ├── api.js              🔜  Axios instance → http://localhost:8080/api/v1
+    ├── main.jsx            ✅  React root + context providers
+    ├── App.jsx             ✅  Router — all page routes
+    ├── api/                ✅  Axios instances with dynamic JWT interception
     │
     ├── pages/
-    │   ├── Dashboard.jsx       🔜  Metrics cards + job counts. Polls /admin/metrics every 5s
-    │   ├── Companies.jsx       🔜  List + create companies
-    │   ├── Projects.jsx        🔜  List + create projects per company
-    │   ├── ApiKeys.jsx         🔜  Create key (show raw once), list with hint, revoke
-    │   ├── Jobs.jsx            🔜  Browse all jobs, filter by project/status, paginated
-    │   ├── JobDetail.jsx       🔜  Full job detail, payload viewer, retry button
-    │   ├── DeadLetterQueue.jsx 🔜  DLQ table, replay single/all, failure reason
-    │   └── SmtpSettings.jsx    🔜  Add/remove SMTP configs per company, test connection
+    │   ├── Dashboard.jsx       ✅  Metrics cards + job counts + Line Charts
+    │   ├── Projects.jsx        ✅  List + create projects per company
+    │   ├── ApiKeys.jsx         ✅  Create key (show raw once), list with hint, revoke
+    │   ├── Jobs.jsx            ✅  Browse all jobs, filter by project/status, paginated
+    │   ├── JobDetail.jsx       ✅  Full job detail, payload viewer, retry button
+    │   └── DeadLetterQueue.jsx ✅  DLQ table, replay single/all, failure reason
     │
     └── components/
-        ├── Sidebar.jsx         🔜  Navigation
-        ├── MetricCard.jsx      🔜  Number + label dashboard card
-        ├── JobTable.jsx        🔜  Reusable paginated table
-        ├── StatusBadge.jsx     🔜  Coloured pill: QUEUED/RUNNING/SUCCESS/FAILED/DEAD
-        └── ConfirmModal.jsx    🔜  Reusable confirm dialog
+        ├── Sidebar.jsx         ✅  Navigation & layout wrapper
+        ├── TopBar.jsx          ✅  Theme toggler & logout
+        └── StatusBadge.jsx     ✅  Coloured pill tags for queues
 ```
 
 ---
