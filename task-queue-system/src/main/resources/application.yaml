@@ -1,0 +1,201 @@
+spring:
+  application:
+    name: task-queue-system
+
+  # MYSQL DATABASE
+
+  datasource:
+    url: jdbc:postgresql://localhost:5433/taskqueue_db
+    username: tquser
+    password: "YOUR_DB_PASSWORD" # PLEASE SET VIA ENV VAR OR LOCAL CONFIG
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      # HikariCP connection pool settings
+      maximum-pool-size: 20          # max concurrent DB connections
+      minimum-idle: 5                # keep 5 connections warm always
+      connection-timeout: 30000      # 30s wait for connection before error
+      idle-timeout: 600000           # close idle connection after 10min
+      max-lifetime: 1800000          # replace connection after 30min
+
+  # JPA / HIBERNATE
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+      # validate = Hibernate checks your @Entity matches DB schema
+      # NEVER use create/create-drop in production — use Flyway migrations
+    show-sql: false                  # set true only when debugging queries
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        use_sql_comments: true
+
+  # FLYWAY — DB MIGRATIONS
+  # Runs SQL files in src/main/resources/db/migration/
+  # on every startup — only runs NEW files
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+  # REDIS
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 10
+          max-idle: 5
+          min-idle: 2
+
+  # KAFKA
+
+#  :
+#    bootstrap-servers: localhost:9092
+#    producer:
+#      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+#      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+#      retries: 3                     # retry failed publishes 3 times
+#      acks: all                      # wait for all replicas to ack (reliability)
+#      properties:
+#        spring.json.add.type.headers: false
+#    consumer:
+#      group-id: task-queue-workers
+#      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+#      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+#      auto-offset-reset: earliest    # if consumer is new, read from beginning
+#      enable-auto-commit: false      # manual commit = don't lose jobs on crash
+#      properties:
+#        spring.json.trusted.packages: "com.taskqueue.model"
+#        spring.json.add.type.headers: false
+#    listener:
+#      ack-mode: manual_immediate     # ack only after successful processing
+
+  # ─────────────────────────────────────────
+  # KAFKA
+  # ─────────────────────────────────────────
+  Kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      retries: 3
+      acks: all
+      properties:
+        spring.json.add.type.headers: false
+    consumer:
+      group-id: task-queue-workers
+      key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      properties:
+        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: "com.taskqueue.model"
+        spring.json.add.type.headers: false
+        spring.json.value.default.type: "com.taskqueue.model.JobEvent"
+  # MAIL — Global fallback SMTP
+  # Company-specific SMTP is in DB (smtp_configs table)
+  # This is YOUR server's fallback for system emails
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: codewithmyself2@gmail.com
+    password: "YOUR_EMAIL_APP_PASSWORD_HERE" # PLEASE SET VIA ENV VAR OR LOCAL CONFIG
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+        debug: false
+
+
+  # SECURITY — disable default login page
+  # We use our own ApiKeyFilter, not Spring Security auth
+
+  security:
+    user:
+      name: ignored
+      password: ignored
+
+# SERVER
+server:
+  port: 8080
+  servlet:
+    context-path: /api/v1
+  error:
+    include-message: always
+    include-binding-errors: always
+
+# ACTUATOR — health & metrics endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,kafkametrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+
+
+# SWAGGER / OPENAPI
+# URL: http://localhost:8080/swagger-ui.html
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+
+# YOUR APP CUSTOM PROPERTIES
+# Injected via @ConfigurationProperties or @Value
+app:
+  jwt:
+    secret: "YOUR_32_CHAR_JWT_SECRET_KEY_HERE_"   # exactly 32+ chars
+    expiry-hours: 24
+
+  # AES-256 key for encrypting SMTP passwords in DB
+  # MUST be exactly 32 characters
+  encryption:
+    key: "YOUR_32_CHAR_ENCRYPTION_KEY_HERE"   # CHANGE THIS in production
+
+  # Kafka topic names — centralised here so easy to change
+  kafka:
+    topics:
+      high-priority: "jobs.high-priority"
+      normal-priority: "jobs.normal-priority"
+      low-priority: "jobs.low-priority"
+      dead-letter: "jobs.dead-letter"
+
+  # Redis key TTLs (in seconds)
+  redis:
+    api-key-cache-ttl: 300          # cache API key lookup for 5 minutes
+    rate-limit-window: 60           # rate limit window = 1 minute
+
+  # Job retry configuration
+  retry:
+    max-attempts: 3
+    initial-delay-seconds: 30
+    multiplier: 2                   # 30s → 60s → 120s (exponential)
+
+  # Admin panel — only allow from localhost
+  admin:
+    allowed-ip: "127.0.0.1"
+    path-prefix: "/admin"
+
+  # Webhook config
+  webhook:
+    timeout-seconds: 10
+    max-retries: 3

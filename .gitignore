@@ -1,0 +1,47 @@
+# IDE / Editor
+.idea/
+**/.idea/
+.vscode/
+**/.vscode/
+*.swp
+*.swo
+*.iml
+*.iws
+*.ipr
+.settings/
+.classpath
+.project
+
+# macOS
+.DS_Store
+
+# Frontend (Vite / React)
+FRONTENDUI/node_modules/
+FRONTENDUI/dist/
+FRONTENDUI/dist-ssr/
+FRONTENDUI/*.local
+FRONTENDUI/.eslintcache
+
+# Backend (Spring Boot / Maven)
+task-queue-system/target/
+task-queue-system/*.class
+task-queue-system/*.jar
+task-queue-system/*.war
+task-queue-system/*.ear
+task-queue-system/.mvn/
+task-queue-system/mvnw
+task-queue-system/mvnw.cmd
+!task-queue-system/src/main/**/target/
+!task-queue-system/src/test/**/target/
+
+# Logs
+logs/
+*.log
+
+# Temp / OS Files
+Thumbs.db
+
+# Environment variables
+FRONTENDUI/.env
+FRONTENDUI/.env.*.local
+task-queue-system/.env
