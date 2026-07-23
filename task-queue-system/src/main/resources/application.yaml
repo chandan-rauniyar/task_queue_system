@@ -7,7 +7,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5433/taskqueue_db
     username: tquser
-    password: "YOUR_DB_PASSWORD" # PLEASE SET VIA ENV VAR OR LOCAL CONFIG
+    password: tqpass123 # PLEASE SET VIA ENV VAR OR LOCAL CONFIG
     driver-class-name: org.postgresql.Driver
     hikari:
       # HikariCP connection pool settings
@@ -109,7 +109,7 @@ spring:
     host: smtp.gmail.com
     port: 587
     username: codewithmyself2@gmail.com
-    password: "YOUR_EMAIL_APP_PASSWORD_HERE" # PLEASE SET VIA ENV VAR OR LOCAL CONFIG
+    password: xwfdzcoyuqzmycro # PLEASE SET VIA ENV VAR OR LOCAL CONFIG
     properties:
       mail:
         smtp:
@@ -163,13 +163,13 @@ springdoc:
 # Injected via @ConfigurationProperties or @Value
 app:
   jwt:
-    secret: "YOUR_32_CHAR_JWT_SECRET_KEY_HERE_"   # exactly 32+ chars
+    secret: "YourJwtSecretKeyMustBe32CharsLong!!"   # exactly 32+ chars
     expiry-hours: 24
 
   # AES-256 key for encrypting SMTP passwords in DB
   # MUST be exactly 32 characters
   encryption:
-    key: "YOUR_32_CHAR_ENCRYPTION_KEY_HERE"   # CHANGE THIS in production
+    key: "MySecretKey1234567890123456ABCDE"   # CHANGE THIS in production
 
   # Kafka topic names — centralised here so easy to change
   kafka:

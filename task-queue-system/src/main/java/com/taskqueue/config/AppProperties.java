@@ -6,19 +6,26 @@ import org.springframework.stereotype.Component;
 
 /**
  * Reads all "app.*" properties from application.yml into typed fields.
- * Inject this anywhere with: @Autowired App Properties appProperties;
+ * Inject this anywhere with: @Autowired AppProperties appProperties;
  */
 @Data
 @Component
 @ConfigurationProperties(prefix = "app")
 public class AppProperties {
 
+    private Jwt jwt = new Jwt();
     private Encryption encryption = new Encryption();
     private Kafka kafka = new Kafka();
     private Redis redis = new Redis();
     private Retry retry = new Retry();
     private Admin admin = new Admin();
     private Webhook webhook = new Webhook();
+
+    @Data
+    public static class Jwt {
+        private String secret;
+        private int expiryHours = 24;
+    }
 
     @Data
     public static class Encryption {

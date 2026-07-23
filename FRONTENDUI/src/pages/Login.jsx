@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { Zap, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { login as loginApi } from '../api/auth'
@@ -98,8 +98,17 @@ export default function Login() {
           </form>
 
           <p className="text-xs text-gray-400 dark:text-gray-600 text-center mt-4">
-            Default: admin@taskqueue.local / admin123
+            Default admin: admin@taskqueue.local / admin123
           </p>
+
+          <div className="border-t border-gray-100 dark:border-gray-800 mt-4 pt-4">
+            <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+              New user?{' '}
+              <Link to="/register" className="text-primary-500 hover:text-primary-600 font-medium">
+                Create an account
+              </Link>
+            </p>
+          </div>
         </div>
 
       </div>

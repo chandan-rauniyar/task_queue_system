@@ -17,14 +17,11 @@ import java.util.Map;
 /**
  * Runs FIRST (Order 0) — before ApiKeyFilter.
  *
- * If the request path starts with /admin/ AND comes from localhost,
- * set ClientContext as an admin request and skip ApiKeyFilter entirely.
+ * Allows /admin/** requests from:
+ *   1. Localhost IP (127.0.0.1 / ::1)  — original behavior
+ *   2. Valid JWT with role=ADMIN        — NEW: lets the login page work
  *
- * If someone tries to call /admin/** from a non-localhost IP,
- * return 403 immediately — even if they have a valid API key.
- *
- * This is how your React admin panel (localhost:3000) talks
- * to your backend (localhost:8080) without needing an API key.
+ * Everything else gets 403.
  */
 @Slf4j
 @Component
@@ -33,14 +30,14 @@ import java.util.Map;
 public class AdminBypassFilter extends OncePerRequestFilter {
 
     private final AppProperties appProperties;
-    private final ObjectMapper objectMapper;
-    private final JwtService jwtService;
+    private final ObjectMapper  objectMapper;
+    private final JwtService    jwtService;
 
     @Override
     protected void doFilterInternal(
-            HttpServletRequest request,
+            HttpServletRequest  request,
             HttpServletResponse response,
-            FilterChain chain
+            FilterChain         chain
     ) throws ServletException, IOException {
 
         String path = request.getRequestURI();
@@ -51,51 +48,54 @@ public class AdminBypassFilter extends OncePerRequestFilter {
             return;
         }
 
-        // Check 2: valid JWT with ADMIN role
+        // ── Check 1: localhost IP ─────────────────────────────
+        String remoteIp = getClientIp(request);
+        boolean isLocalhost = "127.0.0.1".equals(remoteIp)
+                || "0:0:0:0:0:0:0:1".equals(remoteIp)
+                || "::1".equals(remoteIp);
+
+        if (isLocalhost) {
+            setAdminContextAndContinue(request, response, chain);
+            return;
+        }
+
+        // ── Check 2: valid JWT with ADMIN role ────────────────
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             try {
                 if (jwtService.isValid(token) && "ADMIN".equals(jwtService.getRole(token))) {
-                    ClientContext.ClientInfo info = new ClientContext.ClientInfo();
-                    info.setAdminRequest(true);
-                    info.setProjectName("Admin");
-                    info.setCompanyName("System");
-                    ClientContext.set(info);
-                    chain.doFilter(request, response);
-                    ClientContext.clear();
+                    log.debug("Admin access via JWT from IP: {}", remoteIp);
+                    setAdminContextAndContinue(request, response, chain);
                     return;
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                log.warn("Invalid JWT on admin endpoint: {}", e.getMessage());
+            }
         }
 
-        String remoteIp = getClientIp(request);
-        String allowedIp = appProperties.getAdmin().getAllowedIp();
+        // ── Neither condition met → 403 ───────────────────────
+        log.warn("Blocked admin access attempt from IP: {}", remoteIp);
+        response.setStatus(403);
+        response.setContentType("application/json");
+        response.getWriter().write(
+                objectMapper.writeValueAsString(Map.of(
+                        "success", false,
+                        "error",   "Admin access requires localhost or valid admin JWT"
+                ))
+        );
+    }
 
-        boolean isLocalhost = "127.0.0.1".equals(remoteIp)
-                || "0:0:0:0:0:0:0:1".equals(remoteIp)  // IPv6 localhost
-                || "::1".equals(remoteIp);
-
-        if (!isLocalhost) {
-            log.warn("Blocked admin access attempt from IP: {}", remoteIp);
-            response.setStatus(403);
-            response.setContentType("application/json");
-            response.getWriter().write(
-                    objectMapper.writeValueAsString(Map.of(
-                            "success", false,
-                            "error", "Admin panel is only accessible from localhost"
-                    ))
-            );
-            return;
-        }
-
-        // Localhost request — set admin context, skip ApiKeyFilter
+    private void setAdminContextAndContinue(
+            HttpServletRequest  request,
+            HttpServletResponse response,
+            FilterChain         chain
+    ) throws ServletException, IOException {
         ClientContext.ClientInfo adminInfo = new ClientContext.ClientInfo();
         adminInfo.setAdminRequest(true);
         adminInfo.setProjectName("Admin");
         adminInfo.setCompanyName("System");
         ClientContext.set(adminInfo);
-
         try {
             chain.doFilter(request, response);
         } finally {
@@ -104,7 +104,6 @@ public class AdminBypassFilter extends OncePerRequestFilter {
     }
 
     private String getClientIp(HttpServletRequest request) {
-        // Check X-Forwarded-For in case of proxy
         String forwarded = request.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isEmpty()) {
             return forwarded.split(",")[0].trim();

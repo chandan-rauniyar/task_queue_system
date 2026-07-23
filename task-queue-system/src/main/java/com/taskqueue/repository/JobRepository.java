@@ -13,11 +13,8 @@ import java.util.Optional;
 @Repository
 public interface JobRepository extends JpaRepository<Job, String> {
 
-    /**
-     * Load a single job with ALL lazy relations eagerly.
-     * Use this everywhere you need job.getProject() or job.getApiKey().
-     * Prevents LazyInitializationException in workers, services, filters.
-     */
+    // ── JOIN FETCH queries — use these everywhere to avoid LazyInit ──
+
     @Query("""
         SELECT j FROM Job j
         JOIN FETCH j.project p
@@ -27,33 +24,43 @@ public interface JobRepository extends JpaRepository<Job, String> {
     """)
     Optional<Job> findByIdWithRelations(String id);
 
-    // Paginated list for client API — project jobs
-    Page<Job> findByProjectId(String projectId, Pageable pageable);
-
-    // Filter by project + status
-    Page<Job> findByProjectIdAndStatus(String projectId, Job.Status status, Pageable pageable);
-
-    // Admin browser — all jobs by status
-    Page<Job> findByStatus(Job.Status status, Pageable pageable);
-
-    // Count by status for metrics dashboard
-    long countByStatus(Job.Status status);
-
-    // Idempotency check
-    Optional<Job> findByProjectIdAndIdempotencyKey(String projectId, String idempotencyKey);
-
-    // RetryService — find jobs eligible for retry
     @Query("""
         SELECT j FROM Job j
         JOIN FETCH j.project p
         JOIN FETCH p.company c
         JOIN FETCH j.apiKey k
-        WHERE j.status = 'FAILED'
-        AND j.retryCount < j.maxRetries
+        WHERE j.status = 'FAILED' AND j.retryCount < j.maxRetries
     """)
     List<Job> findRetryableJobs();
 
-    // Dashboard status breakdown
+    // ── Single project queries ──
+
+    Page<Job> findByProjectId(String projectId, Pageable pageable);
+
+    Page<Job> findByProjectIdAndStatus(String projectId, Job.Status status, Pageable pageable);
+
+    long countByProjectId(String projectId);
+
+    long countByProjectIdAndStatus(String projectId, Job.Status status);
+
+    // ── Multi-project queries (for CLIENT — all projects in their company) ──
+
+    Page<Job> findByProjectIdIn(List<String> projectIds, Pageable pageable);
+
+    Page<Job> findByProjectIdInAndStatus(List<String> projectIds, Job.Status status, Pageable pageable);
+
+    // ── Admin queries ──
+
+    Page<Job> findByStatus(Job.Status status, Pageable pageable);
+
+    long countByStatus(Job.Status status);
+
+    // ── Idempotency ──
+
+    Optional<Job> findByProjectIdAndIdempotencyKey(String projectId, String idempotencyKey);
+
+    // ── Dashboard ──
+
     @Query("SELECT j.status, COUNT(j) FROM Job j GROUP BY j.status")
     List<Object[]> countGroupedByStatus();
 }

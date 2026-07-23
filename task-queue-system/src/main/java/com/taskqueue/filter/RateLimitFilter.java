@@ -17,21 +17,12 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
- * Runs AFTER ApiKeyFilter (Order 2).
- * By this point, ClientContext is already set.
- *
- * Strategy: Redis sliding counter per client per minute.
- *
- * Redis key pattern: "rate:{apiKeyId}:{minute-bucket}"
- * e.g. "rate:key-abc-123:2024011514"  (yyyyMMddHHmm)
- *
- * On each request:
- *  INCR the counter → if > limit → return 429
- *  Set TTL to 60s so key auto-expires
+ * Rate limiting — only applies to API key requests (X-API-Key header).
+ * JWT requests (/client/**) and admin requests are NOT rate limited here.
  */
 @Slf4j
 @Component
-@Order(2)
+@Order(3)
 @RequiredArgsConstructor
 public class RateLimitFilter extends OncePerRequestFilter {
 
@@ -41,33 +32,34 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(
-            HttpServletRequest request,
+            HttpServletRequest  request,
             HttpServletResponse response,
-            FilterChain chain
+            FilterChain         chain
     ) throws ServletException, IOException {
 
-        // Skip rate limiting for admin requests and public paths
         ClientContext.ClientInfo client = ClientContext.get();
 
-        if (client == null || client.isAdminRequest()) {
+        // Skip: no context, admin requests, or JWT-based client requests (no apiKeyId)
+        if (client == null
+                || client.isAdminRequest()
+                || client.getApiKeyId() == null
+                || client.getApiKeyId().isBlank()
+                || client.getRateLimitPerMin() <= 0) {
             chain.doFilter(request, response);
             return;
         }
 
         String apiKeyId = client.getApiKeyId();
-        int limit = client.getRateLimitPerMin();
+        int    limit    = client.getRateLimitPerMin();
 
-        // Bucket key = apiKeyId + current minute
         String minute = java.time.format.DateTimeFormatter
                 .ofPattern("yyyyMMddHHmm")
                 .format(LocalDateTime.now());
         String redisKey = "rate:" + apiKeyId + ":" + minute;
 
         try {
-            // Atomically increment and get new value
             Long count = redisTemplate.opsForValue().increment(redisKey);
 
-            // Set TTL on first request of this minute
             if (count != null && count == 1) {
                 redisTemplate.expire(redisKey, Duration.ofSeconds(
                         appProperties.getRedis().getRateLimitWindow()
@@ -81,25 +73,21 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 response.setHeader("X-RateLimit-Limit", String.valueOf(limit));
                 response.setHeader("X-RateLimit-Remaining", "0");
                 response.setContentType("application/json");
-                response.getWriter().write(
-                        objectMapper.writeValueAsString(Map.of(
-                                "success", false,
-                                "error", "Rate limit exceeded. Max " + limit + " requests/minute.",
-                                "retryAfter", 60
-                        ))
-                );
+                response.getWriter().write(objectMapper.writeValueAsString(Map.of(
+                        "success",    false,
+                        "error",      "Rate limit exceeded. Max " + limit + " requests/minute.",
+                        "retryAfter", 60
+                )));
                 return;
             }
 
-            // Add rate limit headers to successful responses too
             if (count != null) {
-                response.setHeader("X-RateLimit-Limit", String.valueOf(limit));
+                response.setHeader("X-RateLimit-Limit",     String.valueOf(limit));
                 response.setHeader("X-RateLimit-Remaining", String.valueOf(Math.max(0, limit - count)));
             }
 
         } catch (Exception e) {
-            // Redis failure is non-fatal — allow the request through
-            log.error("Rate limit check failed (Redis error), allowing request: {}", e.getMessage());
+            log.error("Rate limit Redis error, allowing request: {}", e.getMessage());
         }
 
         chain.doFilter(request, response);

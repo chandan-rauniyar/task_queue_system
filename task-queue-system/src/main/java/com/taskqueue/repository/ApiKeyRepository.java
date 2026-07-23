@@ -33,6 +33,9 @@ public interface ApiKeyRepository extends JpaRepository<ApiKey, String> {
     // List all keys for a project (admin UI)
     List<ApiKey> findByProjectId(String projectId);
 
+    // Count keys across multiple projects — for CLIENT metrics
+    long countByProjectIdIn(List<String> projectIds);
+
     // Update last used timestamp
     @Modifying
     @Transactional

@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { LayoutDashboard, Briefcase, CheckCircle, XCircle, Clock, AlertTriangle, Building2, FolderOpen } from 'lucide-react'
 import { getMetrics } from '../api/metrics'
+import { getClientMetrics, getClientJobs } from '../api/client'
 import { getJobs } from '../api/jobs'
+import { useAuth } from '../context/AuthContext'
 import { MetricCard } from '../components/dashboard/MetricCard'
 import Badge from '../components/ui/Badge'
 import { Spinner } from '../components/ui/index.jsx'
@@ -21,15 +23,20 @@ const BAR_COLORS = {
 export default function Dashboard() {
   const navigate = useNavigate()
 
+  const { user } = useAuth()
+  const isClient = user?.role === 'CLIENT'
+
   const { data: metrics, isLoading: mLoading } = useQuery({
-    queryKey: ['metrics'],
-    queryFn: getMetrics,
+    queryKey: ['metrics', isClient],
+    queryFn: isClient ? getClientMetrics : getMetrics,
     refetchInterval: 10000,
   })
 
   const { data: recentJobs, isLoading: jLoading } = useQuery({
-    queryKey: ['jobs', 'recent'],
-    queryFn: () => getJobs({ page: 0, size: 8 }),
+    queryKey: ['jobs', 'recent', isClient],
+    queryFn: isClient
+      ? () => getClientJobs({ page: 0, size: 8 })
+      : () => getJobs({ page: 0, size: 8 }),
     refetchInterval: 10000,
   })
 

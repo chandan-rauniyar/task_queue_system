@@ -4,7 +4,7 @@ const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
-    const token = localStorage.getItem('tq_token')
+    const token    = localStorage.getItem('tq_token')
     const userData = localStorage.getItem('tq_user')
     if (token && userData) {
       try { return JSON.parse(userData) } catch { return null }
@@ -24,10 +24,11 @@ export function AuthProvider({ children }) {
     setUser(null)
   }
 
-  const isAdmin = user?.role === 'ADMIN'
+  const isAdmin  = user?.role === 'ADMIN'
+  const isClient = user?.role === 'CLIENT'
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAdmin }}>
+    <AuthContext.Provider value={{ user, login, logout, isAdmin, isClient }}>
       {children}
     </AuthContext.Provider>
   )

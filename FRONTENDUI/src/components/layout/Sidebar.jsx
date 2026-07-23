@@ -6,9 +6,11 @@ import {
 import { useAuth } from '../../context/AuthContext'
 import { useQuery } from '@tanstack/react-query'
 import { getMetrics } from '../../api/metrics'
+import { getClientMetrics } from '../../api/client'
 import clsx from 'clsx'
 
-const NAV = [
+// Admin sees everything
+const ADMIN_NAV = [
   { to: '/dashboard',  icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/companies',  icon: Building2,       label: 'Companies' },
   { to: '/projects',   icon: FolderOpen,      label: 'Projects' },
@@ -18,14 +20,28 @@ const NAV = [
   { to: '/smtp',       icon: Mail,            label: 'SMTP Settings' },
 ]
 
+// Client only sees their own company's pages
+const CLIENT_NAV = [
+  { to: '/dashboard',  icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/my-projects', icon: FolderOpen,     label: 'Projects' },
+  { to: '/my-keys',    icon: Key,             label: 'API Keys' },
+  { to: '/my-jobs',    icon: Briefcase,       label: 'Jobs' },
+  { to: '/my-dlq',     icon: AlertTriangle,   label: 'Dead Letter Queue', badge: true },
+  { to: '/my-smtp',    icon: Mail,            label: 'SMTP Settings' },
+]
+
 export default function Sidebar({ collapsed, onClose }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const isClient = user?.role === 'CLIENT'
+
+  const NAV = isClient ? CLIENT_NAV : ADMIN_NAV
 
   const { data: metrics } = useQuery({
-    queryKey: ['metrics'],
-    queryFn: getMetrics,
+    queryKey: ['metrics', isClient],
+    queryFn: isClient ? getClientMetrics : getMetrics,
     refetchInterval: 30000,
+    enabled: !!user,
   })
 
   const handleLogout = () => {
@@ -35,12 +51,8 @@ export default function Sidebar({ collapsed, onClose }) {
 
   return (
     <>
-      {/* Mobile overlay */}
       {!collapsed && (
-        <div
-          className="fixed inset-0 z-20 bg-black/40 lg:hidden"
-          onClick={onClose}
-        />
+        <div className="fixed inset-0 z-20 bg-black/40 lg:hidden" onClick={onClose} />
       )}
 
       <aside className={clsx(
@@ -55,9 +67,16 @@ export default function Sidebar({ collapsed, onClose }) {
             <Zap className="w-4 h-4 text-white" />
           </div>
           {!collapsed && (
-            <span className="font-semibold text-gray-900 dark:text-gray-100 truncate">
-              Task Queue
-            </span>
+            <div className="min-w-0">
+              <span className="font-semibold text-gray-900 dark:text-gray-100 truncate block">
+                Task Queue
+              </span>
+              {isClient && user?.companyName && (
+                <span className="text-xs text-gray-500 dark:text-gray-400 truncate block">
+                  {user.companyName}
+                </span>
+              )}
+            </div>
           )}
         </div>
 
@@ -68,9 +87,7 @@ export default function Sidebar({ collapsed, onClose }) {
               key={to}
               to={to}
               onClick={onClose}
-              className={({ isActive }) =>
-                clsx('sidebar-link', isActive && 'active')
-              }
+              className={({ isActive }) => clsx('sidebar-link', isActive && 'active')}
             >
               <Icon className="w-4 h-4 flex-shrink-0" />
               {!collapsed && (
@@ -90,18 +107,17 @@ export default function Sidebar({ collapsed, onClose }) {
         {/* User */}
         <div className="p-3 border-t border-gray-200 dark:border-gray-800">
           <div className={clsx(
-            'flex items-center gap-3 px-3 py-2 rounded-lg',
-            'bg-gray-50 dark:bg-gray-800'
+            'flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-800'
           )}>
             <div className="w-7 h-7 rounded-full bg-primary-500 flex items-center justify-center flex-shrink-0">
               <span className="text-white text-xs font-semibold">
-                {user?.email?.[0]?.toUpperCase() || 'A'}
+                {user?.email?.[0]?.toUpperCase() || 'U'}
               </span>
             </div>
             {!collapsed && (
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">
-                  {user?.email}
+                  {user?.name || user?.email}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">{user?.role}</p>
               </div>

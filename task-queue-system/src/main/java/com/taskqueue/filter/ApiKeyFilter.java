@@ -32,7 +32,7 @@ import java.util.Optional;
  */
 @Slf4j
 @Component
-@Order(1)
+@Order(2)
 @RequiredArgsConstructor
 public class ApiKeyFilter extends OncePerRequestFilter {
 
@@ -143,7 +143,8 @@ public class ApiKeyFilter extends OncePerRequestFilter {
 
     private boolean isPublicPath(String path) {
         return path.contains("/admin/")
-                || path.contains("/auth/")
+                || path.contains("/client/")   // JWT handled by JwtAuthFilter
+                || path.contains("/auth/")     // login/register — no auth needed
                 || path.contains("/actuator")
                 || path.contains("/swagger-ui")
                 || path.contains("/api-docs")
