@@ -8,19 +8,41 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface DeadLetterRepository extends JpaRepository<DeadLetterJob, String> {
 
-    // Admin — all unreplayed
-    Page<DeadLetterJob> findByReplayedAtIsNull(Pageable pageable);
-
-    long countByReplayedAtIsNull();
-
-    // CLIENT — only their company's unreplayed DLQ entries
+    // ── Admin — all unreplayed, JOIN FETCH to avoid LazyInit ──
     @Query("""
         SELECT d FROM DeadLetterJob d
-        WHERE d.job.project.id IN :projectIds
+        JOIN FETCH d.job j
+        JOIN FETCH j.project p
+        JOIN FETCH p.company c
+        WHERE d.replayedAt IS NULL
+    """)
+    List<DeadLetterJob> findAllPendingWithRelations();
+
+    // COUNT for metrics (no fetch needed)
+    long countByReplayedAtIsNull();
+
+    // Single entry with relations for replay
+    @Query("""
+        SELECT d FROM DeadLetterJob d
+        JOIN FETCH d.job j
+        JOIN FETCH j.project p
+        JOIN FETCH p.company c
+        WHERE d.id = :id
+    """)
+    Optional<DeadLetterJob> findByIdWithRelations(String id);
+
+    // ── CLIENT — scoped to their company's projects ──
+    @Query("""
+        SELECT d FROM DeadLetterJob d
+        JOIN FETCH d.job j
+        JOIN FETCH j.project p
+        JOIN FETCH p.company c
+        WHERE p.id IN :projectIds
         AND d.replayedAt IS NULL
     """)
     Page<DeadLetterJob> findByJobProjectIdInAndReplayedAtIsNull(
